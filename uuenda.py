@@ -4,7 +4,7 @@ import io
 import os
 import json
 from datetime import datetime
-from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -16,7 +16,7 @@ def uplaodi_google_drive(faili_nimi):
 
     # Fetch OAuth credentials from GitHub Secrets
     creds = Credentials(
-        token=None,
+        None,  # Muutsime: 'token=None' asemel on nüüd lihtsalt 'None'
         refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
         token_uri="https://oauth2.googleapis.com/token",
         client_id=os.environ["GDRIVE_CLIENT_ID"],
