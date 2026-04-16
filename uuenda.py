@@ -14,12 +14,16 @@ LOGI_FAIL = "maksuvola_ajalugu.csv"
 def uplaodi_google_drive(faili_nimi):
     FOLDER_ID = "1LS_EVrXSKKxxK7BE-YnWmo2-72UQmbLO"
 
-    creds_json = os.environ["GDRIVE_CREDENTIALS"]
-    creds_dict = json.loads(creds_json)
-    creds = Credentials.from_service_account_info(
-        creds_dict,
+    # Fetch OAuth credentials from GitHub Secrets
+    creds = Credentials(
+        token=None,
+        refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["GDRIVE_CLIENT_ID"],
+        client_secret=os.environ["GDRIVE_CLIENT_SECRET"],
         scopes=["https://www.googleapis.com/auth/drive"]
     )
+    
     service = build("drive", "v3", credentials=creds)
 
     # Search for existing file in the folder
