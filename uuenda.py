@@ -12,6 +12,8 @@ URL = "https://ncfailid.emta.ee/s/EXNA4wtJWmX54bp/download/maksuvolglaste_nimeki
 LOGI_FAIL = "maksuvola_ajalugu.csv"
 
 def uplaodi_google_drive(faili_nimi):
+    FOLDER_ID = "1LS_EVrXSKKxxK7BE-YnWmo2-72UQmbLO"  # <-- add this line
+    
     creds_json = os.environ["GDRIVE_CREDENTIALS"]
     creds_dict = json.loads(creds_json)
     creds = Credentials.from_service_account_info(
@@ -20,7 +22,7 @@ def uplaodi_google_drive(faili_nimi):
     )
     service = build("drive", "v3", credentials=creds)
     results = service.files().list(
-        q=f"name='{faili_nimi}'",
+        q=f"name='{faili_nimi}' and '{FOLDER_ID}' in parents",
         fields="files(id, name)"
     ).execute()
     files = results.get("files", [])
@@ -32,7 +34,8 @@ def uplaodi_google_drive(faili_nimi):
         print("Fail uuendatud Google Drive'is.")
     else:
         service.files().create(
-            body={"name": faili_nimi}, media_body=media
+            body={"name": faili_nimi, "parents": [FOLDER_ID]},  # <-- folder added
+            media_body=media
         ).execute()
         print("Fail loodud Google Drive'is.")
 
