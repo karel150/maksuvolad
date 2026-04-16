@@ -1,0 +1,27 @@
+name: Daily tax debt update
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Every day at 6:00 UTC = 9:00 Tallinn time
+  workflow_dispatch:        # Allows manual trigger from GitHub UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests openpyxl \
+            google-auth google-api-python-client
+
+      - name: Run script
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+        run: python uuenda.py
