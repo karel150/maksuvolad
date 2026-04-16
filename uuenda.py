@@ -12,8 +12,8 @@ URL = "https://ncfailid.emta.ee/s/EXNA4wtJWmX54bp/download/maksuvolglaste_nimeki
 LOGI_FAIL = "maksuvola_ajalugu.csv"
 
 def uplaodi_google_drive(faili_nimi):
-    FOLDER_ID = "1LS_EVrXSKKxxK7BE-YnWmo2-72UQmbLO"  # <-- add this line
-    
+    FOLDER_ID = "1LS_EVrXSKKxxK7BE-YnWmo2-72UQmbLO"
+
     creds_json = os.environ["GDRIVE_CREDENTIALS"]
     creds_dict = json.loads(creds_json)
     creds = Credentials.from_service_account_info(
@@ -21,21 +21,30 @@ def uplaodi_google_drive(faili_nimi):
         scopes=["https://www.googleapis.com/auth/drive"]
     )
     service = build("drive", "v3", credentials=creds)
+
+    # Search for existing file in the folder
     results = service.files().list(
-        q=f"name='{faili_nimi}' and '{FOLDER_ID}' in parents",
-        fields="files(id, name)"
+        q=f"name='{faili_nimi}' and '{FOLDER_ID}' in parents and trashed=false",
+        fields="files(id, name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True
     ).execute()
     files = results.get("files", [])
-    media = MediaFileUpload(faili_nimi, mimetype="text/csv")
+
+    media = MediaFileUpload(faili_nimi, mimetype="text/csv", resumable=True)
+
     if files:
         service.files().update(
-            fileId=files[0]["id"], media_body=media
+            fileId=files[0]["id"],
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
         print("Fail uuendatud Google Drive'is.")
     else:
         service.files().create(
-            body={"name": faili_nimi, "parents": [FOLDER_ID]},  # <-- folder added
-            media_body=media
+            body={"name": faili_nimi, "parents": [FOLDER_ID]},
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
         print("Fail loodud Google Drive'is.")
 
