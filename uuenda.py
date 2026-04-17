@@ -38,7 +38,7 @@ def uplaodi_google_drive(faili_nimi):
     if files:
         file_id = files[0]["id"]
         
-        # 1. Laeme olemasoleva sisu Drive'ist alla mällu
+        # 1. Laeme olemasoleva sisu Drive'ist alla
         request = service.files().get_media(fileId=file_id)
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
@@ -48,18 +48,19 @@ def uplaodi_google_drive(faili_nimi):
         
         old_content = fh.getvalue().decode('utf-8')
 
-        # 2. Loeme kohaliku faili sisu (tänased uued andmed)
+        # 2. Loeme kohaliku faili read ja jätame päise vahele
         with open(faili_nimi, "r", encoding="utf-8") as f:
-            new_content = f.read()
+            lines = f.readlines()
+            # Võtame andmed alates teisest reast (index 1), et vältida päise duleerimist
+            new_data_rows = "".join(lines[1:]) if len(lines) > 1 else ""
 
-        # 3. Paneme vana ja uue sisu kokku
-        # Kontrollime, et vana sisu lõpus oleks reavahetus
+        # 3. Paneme vana sisu ja uued andmeread kokku
         if old_content and not old_content.endswith('\n'):
             old_content += '\n'
         
-        combined_content = old_content + new_content
+        combined_content = old_content + new_data_rows
 
-        # Kirjutame liidetud sisu ajutiselt kohalikku faili tagasi
+        # Kirjutame liidetud sisu ajutiselt kohalikku faili tagasi üleslaadimiseks
         with open(faili_nimi, "w", encoding="utf-8") as f:
             f.write(combined_content)
 
@@ -70,17 +71,17 @@ def uplaodi_google_drive(faili_nimi):
             media_body=media,
             supportsAllDrives=True
         ).execute()
-        print(f"Faili sisu täiendatud (lisatud uued andmed).")
+        print(f"Faili sisu täiendatud (päist ei korratud).")
 
     else:
-        # Kui faili veel pole, loome uue faili
+        # Kui faili veel pole, loome uue faili koos päisega
         media = MediaFileUpload(faili_nimi, mimetype="text/csv", resumable=True)
         service.files().create(
             body={"name": faili_nimi, "parents": [FOLDER_ID]},
             media_body=media,
             supportsAllDrives=True
         ).execute()
-        print(f"Uus fail loodud Google Drive'is.")
+        print(f"Uus fail loodud Google Drive'is (koos päisega).")
 
 def uuenda_statistikat():
     try:
