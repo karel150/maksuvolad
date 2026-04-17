@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload MediaIoBaseDownload
 
 URL = "https://ncfailid.emta.ee/s/EXNA4wtJWmX54bp/download/maksuvolglaste_nimekiri.xlsx"
 LOGI_FAIL = "maksuvola_ajalugu.csv"
@@ -14,9 +14,9 @@ LOGI_FAIL = "maksuvola_ajalugu.csv"
 def uplaodi_google_drive(faili_nimi):
     FOLDER_ID = "1LS_EVrXSKKxxK7BE-YnWmo2-72UQmbLO"
 
-    # Fetch OAuth credentials from GitHub Secrets
+    # OAuth sisselogimine GitHub Secrets abil
     creds = Credentials(
-        None,  # Muutsime: 'token=None' asemel on nüüd lihtsalt 'None'
+        None,
         refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
         token_uri="https://oauth2.googleapis.com/token",
         client_id=os.environ["GDRIVE_CLIENT_ID"],
@@ -26,7 +26,7 @@ def uplaodi_google_drive(faili_nimi):
     
     service = build("drive", "v3", credentials=creds)
 
-    # Search for existing file in the folder
+    # Otsime, kas fail on juba kaustas olemas
     results = service.files().list(
         q=f"name='{faili_nimi}' and '{FOLDER_ID}' in parents and trashed=false",
         fields="files(id, name)",
@@ -35,22 +35,52 @@ def uplaodi_google_drive(faili_nimi):
     ).execute()
     files = results.get("files", [])
 
-    media = MediaFileUpload(faili_nimi, mimetype="text/csv", resumable=True)
-
     if files:
+        file_id = files[0]["id"]
+        
+        # 1. Laeme olemasoleva sisu Drive'ist alla mällu
+        request = service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        old_content = fh.getvalue().decode('utf-8')
+
+        # 2. Loeme kohaliku faili sisu (tänased uued andmed)
+        with open(faili_nimi, "r", encoding="utf-8") as f:
+            new_content = f.read()
+
+        # 3. Paneme vana ja uue sisu kokku
+        # Kontrollime, et vana sisu lõpus oleks reavahetus
+        if old_content and not old_content.endswith('\n'):
+            old_content += '\n'
+        
+        combined_content = old_content + new_content
+
+        # Kirjutame liidetud sisu ajutiselt kohalikku faili tagasi
+        with open(faili_nimi, "w", encoding="utf-8") as f:
+            f.write(combined_content)
+
+        # 4. Uuendame faili Drive'is
+        media = MediaFileUpload(faili_nimi, mimetype="text/csv", resumable=True)
         service.files().update(
-            fileId=files[0]["id"],
+            fileId=file_id,
             media_body=media,
             supportsAllDrives=True
         ).execute()
-        print("Fail uuendatud Google Drive'is.")
+        print(f"Faili sisu täiendatud (lisatud uued andmed).")
+
     else:
+        # Kui faili veel pole, loome uue faili
+        media = MediaFileUpload(faili_nimi, mimetype="text/csv", resumable=True)
         service.files().create(
             body={"name": faili_nimi, "parents": [FOLDER_ID]},
             media_body=media,
             supportsAllDrives=True
         ).execute()
-        print("Fail loodud Google Drive'is.")
+        print(f"Uus fail loodud Google Drive'is.")
 
 def uuenda_statistikat():
     try:
