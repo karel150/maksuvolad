@@ -89,7 +89,7 @@ def uuenda_statistikat():
         response = requests.get(URL, timeout=30)
         response.raise_for_status()
         df = pd.read_excel(io.BytesIO(response.content))
-        df.columns = df.columns.str.strip()
+        df.columns = df.columns.astype(str).str.strip()
         volglaste_arv = df['Registrikood'].nunique()
         kogu_vola_summa = int(round(df['Maksuvõlg'].sum()))
         uued_andmed = pd.DataFrame([{
